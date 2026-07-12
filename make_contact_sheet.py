@@ -14,7 +14,7 @@ import sys
 import cv2
 import numpy as np
 
-from hand_frame_fx import EFFECTS, EFFECT_NAMES, apply_effect
+from hand_frame_fx import EFFECTS, apply_effect
 
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "effects_contact_sheet.png")
 
@@ -71,18 +71,21 @@ def main():
     src = cv2.resize(src, (tw, th))
 
     tiles = [label(src.copy(), "original")]
-    for fn, name in zip(EFFECTS, EFFECT_NAMES):
+    for name, fn in EFFECTS:
         tiles.append(label(apply_effect(fn, src.copy()), name))
 
-    ncols = len(tiles)                             # single row for easy comparison
     pad = 6
-    grid = np.full(((th + pad) * 1 - pad, (tw + pad) * ncols - pad, 3), 20, np.uint8)
+    ncols = min(6, len(tiles))                      # wrap into rows once the effect list gets long
+    nrows = -(-len(tiles) // ncols)                 # ceil division
+    grid = np.full(((th + pad) * nrows - pad, (tw + pad) * ncols - pad, 3), 20, np.uint8)
     for i, tile in enumerate(tiles):
-        x = i * (tw + pad)
-        grid[0:th, x:x + tw] = tile
+        row, col = divmod(i, ncols)
+        y = row * (th + pad)
+        x = col * (tw + pad)
+        grid[y:y + th, x:x + tw] = tile
 
     cv2.imwrite(OUT, grid)
-    print(f"Wrote {OUT}  ({ncols} tiles: original + {len(EFFECTS)} effects)")
+    print(f"Wrote {OUT}  ({len(tiles)} tiles: original + {len(EFFECTS)} effects)")
 
 
 if __name__ == "__main__":
